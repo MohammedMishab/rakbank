@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mishab AK</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; }
+        body {
+            background: #f5f7fb;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+            margin: 0;
+        }
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.06);
+            padding: 2rem 2rem 2.5rem;
+        }
+        h1 {
+            font-size: 1.7rem;
+            font-weight: 550;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #0a2540;
+            margin-top: 0.2rem;
+            margin-bottom: 0.2rem;
+            border-bottom: 2px solid #e6ebf2;
+            padding-bottom: 0.8rem;
+        }
+        h1 span {
+            background: #0a3b5c;
+            color: white;
+            font-size: 0.8rem;
+            padding: 3px 10px;
+            border-radius: 30px;
+            font-weight: 400;
+        }
+        .upload-area {
+            border: 2px dashed #b3c6d9;
+            background: #fafcff;
+            border-radius: 20px;
+            padding: 2.8rem 1.5rem;
+            text-align: center;
+            transition: 0.2s;
+            margin: 28px 0 18px;
+        }
+        .upload-area:hover {
+            border-color: #0066cc;
+            background: #f2f8ff;
+        }
+        .upload-area.dragover {
+            background: #e2effa;
+            border-color: #004c99;
+        }
+        .btn {
+            background: #0a3b5c;
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 40px;
+            font-size: 1rem;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            transition: 0.15s;
+            box-shadow: 0 4px 8px rgba(0,55,94,0.12);
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background: #0f4a6f;
+            transform: scale(0.98);
+        }
+        .file-info {
+            margin: 20px 0 10px;
+            color: #2c3e50;
+            font-weight: 450;
+            background: #eef3f9;
+            padding: 10px 18px;
+            border-radius: 40px;
+            display: inline-block;
+        }
+        .log-console {
+            background: #0e1e2b;
+            color: #cbdbe9;
+            border-radius: 16px;
+            padding: 1.2rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 20px 0 10px;
+        }
+        .flex-row {
+            display: flex;
+            gap: 18px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 28px;
+            font-size: 0.78rem;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        }
+        th {
+            background: #1f3a4e;
+            color: white;
+            font-weight: 500;
+            padding: 10px 4px;
+            text-align: left;
+        }
+        td, th {
+            padding: 8px 6px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .csv-preview {
+            max-height: 280px;
+            overflow: auto;
+            border: 1px solid #d2dbe2;
+            border-radius: 14px;
+            background: #ffffff;
+        }
+        .download-btn {
+            background: #1f6e4a;
+            margin-right: 8px;
+        }
+        .note {
+            color: #4a5b6a;
+            font-size: 0.75rem;
+            background: #f4f8fd;
+            padding: 8px 14px;
+            border-radius: 20px;
+        }
+        .small {
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>RAKBANK statement parser</h1>
+    <p class="note">📄 Upload PDF — extracts transactions, and exports CSV.<br>✅ Handles <strong>Cr. balance</strong>, multi‑page, opening balance from summary.</p>
+    
+    <div class="upload-area" id="dropZone">
+        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#0f4a6f" stroke-width="1.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p style="margin: 12px 0 4px; font-weight: 500;">Drag & drop bank PDF here, or click to select</p>
+        <input type="file" id="fileInput" accept=".pdf,application/pdf" style="display: none;">
+        <button class="btn" id="selectFileBtn">📂 Choose PDF file</button>
+    </div>
+
+    <div class="flex-row">
+        <div id="fileNameDisplay" class="file-info">📎 no file selected</div>
+        <div>
+            <button id="processBtn" class="btn" disabled style="background: #5e7c93;">⚙️ Process & export CSV</button>
+        </div>
+    </div>
+
+    <div id="logPanel" class="log-console">
+📋 Log ready – select PDF and click process.
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <h3 style="margin-bottom: 6px; font-weight: 500;">📋 CSV preview (first 15 rows)</h3>
+        <a id="downloadLink" style="text-decoration: none; background: #1f6e4a; color: white; padding: 8px 18px; border-radius: 30px; font-size: 0.8rem; display: inline-block; opacity: 0.6; pointer-events: none;">⬇️ Download CSV</a>
+    </div>
+    <div class="csv-preview">
+        <table id="previewTable">
+            <thead>
+                <tr><th>Date</th><th>Description</th><th>Transaction ID</th><th>Withdrawal</th><th>Deposit</th><th>Balance</th></tr>
+            </thead>
+            <tbody id="previewBody">
+                <tr><td colspan="6" style="text-align:center; padding: 2rem;">⏳ no data yet</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="small" style="margin-top: 16px;">© Mohammed Mishab Ak</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script>
+    (function() {
+        "use strict";
+
+        // ---------- CONFIG ----------
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        // ---------- DOM elements ----------
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const selectFileBtn = document.getElementById('selectFileBtn');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const processBtn = document.getElementById('processBtn');
+        const logPanel = document.getElementById('logPanel');
+        const previewBody = document.getElementById('previewBody');
+        const downloadLink = document.getElementById('downloadLink');
+
+        let currentPDFData = null;      // raw text array per page
+        let selectedFile = null;
+
+        // ---------- logging ----------
+        function log(message) {
+            const p = document.createElement('div');
+            p.textContent = `› ${message}`;
+            logPanel.appendChild(p);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        function clearLog() {
+            logPanel.innerHTML = '';
+        }
+
+        // ---------- file selection ----------
+        function setFile(file) {
+            selectedFile = file;
+            fileNameDisplay.textContent = `📎 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            processBtn.disabled = false;
+            processBtn.style.background = '#0a3b5c';
+            clearLog();
+            log(`📁 ready: ${file.name}`);
+            currentPDFData = null;
+        }
+
+        selectFileBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) setFile(e.target.files[0]);
+        });
+
+        // drag & drop
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) {
+                fileInput.files = e.dataTransfer.files;
+                setFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        // ---------- main processing ----------
+        processBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            clearLog();
+            log('🔄 loading PDF and extracting text ...');
+            try {
+                const arrayBuffer = await selectedFile.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                log(`📄 total pages: ${pdf.numPages}`);
+
+                let fullTextPages = [];
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullTextPages.push(pageText);
+                    log(`page ${i} extracted (${textContent.items.length} items)`);
+                }
+
+                currentPDFData = fullTextPages;
+                const result = parseAllPages(currentPDFData);
+                if (result.transactions.length === 0) {
+                    log('⚠️ no transactions found – check PDF structure');
+                    return;
+                }
+                log(`✅ parsed ${result.transactions.length} transactions · opening balance: ${result.openingBalance.toFixed(2)} AED`);
+
+                // build CSV
+                const csvContent = generateCSV(result.transactions);
+                showPreview(result.transactions);
+                enableDownload(csvContent);
+                log('📥 CSV ready – click download button');
+            } catch (err) {
+                log('❌ ERROR: ' + err.message);
+                console.error(err);
+            }
+        });
+
+        // ---------- CORE PARSING LOGIC (balance diff) ----------
+        function parseAllPages(pagesText) {
+            const allTransactions = [];
+            let openingBalance = 0;
+
+            // ----- 1. extract opening balance from page 1 or any summary -----
+            for (let txt of pagesText) {
+                // look for "Opening Balance AED xx,xxx.xx Cr." 
+                const openingMatch = txt.match(/Opening\s+Balance.*?AED\s*([\d,]+\.\d{2})\s*Cr\.?/i);
+                if (openingMatch) {
+                    openingBalance = parseFloat(openingMatch[1].replace(/,/g, ''));
+                    log(`🏦 found opening balance: ${openingBalance.toFixed(2)} AED`);
+                    break;
+                }
+            }
+
+            // ----- 2. collect all transaction lines from every page -----
+            const rawTxLines = [];
+            pagesText.forEach((page, idx) => {
+                const lines = extractTransactionRows(page);
+                if (lines.length) {
+                    log(`page ${idx+1}: ${lines.length} transaction rows`);
+                    rawTxLines.push(...lines);
+                }
+            });
+
+            // sort by date (they appear desc order usually, but we trust the order from bank)
+            // but we must process from oldest to newest to apply diff logic? wait.
+            // requirement: "start copying first transaction from date last of that transaction" 
+            // meaning preserve reading order as on statement: most recent first. 
+            // However diff logic works if we process from earliest to latest OR reverse? 
+            // We want to compute deposit/withdrawal based on balance difference between consecutive transactions.
+            // Statement shows transactions in reverse chronological (newest on top). 
+            // We'll reverse to chronological (oldest first) to compute diff, then re-reverse for CSV.
+            
+            if (rawTxLines.length === 0) return { transactions: [], openingBalance };
+            
+            // parse into structured objects, keep original order (latest first)
+            let parsedTxs = rawTxLines.map(line => parseTransactionLine(line)).filter(t => t !== null);
+            
+            if (parsedTxs.length === 0) return { transactions: [], openingBalance };
+
+            // ----- reverse to chronological (oldest first) for diff calculation -----
+            parsedTxs.reverse();   // now oldest first
+
+            // ----- assign computed withdrawal / deposit using balance difference -----
+            // first transaction: compare with opening balance
+            if (parsedTxs.length > 0) {
+                let prevBalance = openingBalance;
+                for (let i = 0; i < parsedTxs.length; i++) {
+                    const tx = parsedTxs[i];
+                    const currentBalance = tx.balance; // numeric
+                    
+                    // diff = current - previous
+                    const diff = currentBalance - prevBalance;
+                    if (diff > 0) {
+                        tx.deposit = diff;
+                        tx.withdrawal = 0;
+                    } else {
+                        tx.withdrawal = -diff;
+                        tx.deposit = 0;
+                    }
+                    // edge: if exactly zero (rare) keep 0,0
+                    prevBalance = currentBalance;
+                }
+                // verify last balance matches closing? optional.
+            }
+
+            // reverse back to original order (most recent first) for output
+            parsedTxs.reverse();
+
+            // remove any duplicates by transaction id + date? but keep as is.
+            return { transactions: parsedTxs, openingBalance };
+        }
+
+        // --- extract possible transaction rows from page text ---
+        function extractTransactionRows(pageText) {
+            // pattern: find "dd-Mmm-yyyy" followed by description, then ID (alphanumeric/-), then numbers, then "xx,xxx.xx Cr."
+            // break lines by splitting with table structure; easier: find repeated pattern.
+            const rows = [];
+            // regex that captures: date, full description, transaction ID, withdrawal or deposit? we capture balance always
+            // we use the fact that balance ends with Cr. and has comma separated.
+            // Example: "13-Jan-2026 OUTWARD T/T 1.00 Maria ... S52063838 10,000.00 97,338.83 Cr."
+            const txRegex = /(\d{1,2}-[A-Za-z]{3}-\d{4})\s+(.+?)\s+([A-Z0-9]+)\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s+Cr\./gi;
+            let match;
+            while ((match = txRegex.exec(pageText)) !== null) {
+                rows.push({
+                    date: match[1],
+                    description: match[2].trim(),
+                    transId: match[3],
+                    amountCol: match[4],   // could be withdrawal or deposit; we ignore, use diff
+                    balanceStr: match[5],
+                    full: match[0]
+                });
+            }
+            // also match some lines where transaction ID may have slash etc.
+            // second pattern: more flexible if amount is deposit or withdrawal but we ignore amount, rely on balance diff.
+            const txRegex2 = /(\d{1,2}-[A-Za-z]{3}-\d{4})\s+(.+?)\s+([A-Z0-9\/\-]+)\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s+Cr\./gi;
+            while ((match = txRegex2.exec(pageText)) !== null) {
+                // avoid duplicates (some may overlap)
+                if (!rows.find(r => r.transId === match[3] && r.date === match[1] && r.balanceStr === match[5])) {
+                    rows.push({
+                        date: match[1],
+                        description: match[2].trim(),
+                        transId: match[3],
+                        amountCol: match[4],
+                        balanceStr: match[5],
+                        full: match[0]
+                    });
+                }
+            }
+            return rows;
+        }
+
+        function parseTransactionLine(obj) {
+            try {
+                const balance = parseFloat(obj.balanceStr.replace(/,/g, ''));
+                return {
+                    date: obj.date,
+                    description: cleanDescription(obj.description),
+                    transactionId: obj.transId,
+                    withdrawal: 0,        // to be filled
+                    deposit: 0,
+                    balance: balance,
+                    raw: obj
+                };
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function cleanDescription(desc) {
+            // remove extra spaces, maybe shorten
+            return desc.replace(/\s+/g, ' ').trim();
+        }
+
+        // ------- generate CSV ---------
+        function generateCSV(transactions) {
+            if (!transactions.length) return '';
+            const header = ['Date', 'Description', 'Transaction ID', 'Withdrawal (AED)', 'Deposit (AED)', 'Balance (AED)'];
+            const rows = transactions.map(t => {
+                return [
+                    t.date,
+                    escapeCsv(t.description),
+                    escapeCsv(t.transactionId),
+                    t.withdrawal?.toFixed(2) || '0.00',
+                    t.deposit?.toFixed(2) || '0.00',
+                    t.balance.toFixed(2)
+                ].join(',');
+            });
+            return [header.join(',')].concat(rows).join('\n');
+        }
+
+        function escapeCsv(str) {
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        }
+
+        function showPreview(transactions) {
+            const tbody = previewBody;
+            tbody.innerHTML = '';
+            const topN = transactions.slice(0, 15);
+            topN.forEach(t => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${t.date}</td>
+                    <td style="max-width:200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(t.description)}</td>
+                    <td style="font-size:0.7rem;">${escapeHtml(t.transactionId)}</td>
+                    <td>${t.withdrawal?.toFixed(2) || '0.00'}</td>
+                    <td>${t.deposit?.toFixed(2) || '0.00'}</td>
+                    <td>${t.balance.toFixed(2)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            if (transactions.length > 15) {
+                const more = document.createElement('tr');
+                more.innerHTML = `<td colspan="6" style="text-align:center; background:#f4f6f9;">⋯ +${transactions.length-15} more transactions ⋯</td>`;
+                tbody.appendChild(more);
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text).replace(/[&<>"]/g, function(c) {
+                if(c === '&') return '&amp;';
+                if(c === '<') return '&lt;';
+                if(c === '>') return '&gt;';
+                if(c === '"') return '&quot;';
+                return c;
+            });
+        }
+
+        function enableDownload(csvContent) {
+            const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' }); // BOM for arabic/excel
+            const url = URL.createObjectURL(blob);
+            downloadLink.href = url;
+            downloadLink.style.opacity = '1';
+            downloadLink.style.pointerEvents = 'auto';
+            downloadLink.download = `rakbank_transactions_${new Date().toISOString().slice(0,10)}.csv`;
+        }
+
+        // ---------- reset if new file ----------
+        window.addEventListener('load', () => {
+            // pre-disable
+        });
+    })();
+</script>
+
+<!-- minor polyfill -->
+<script>
+    (function(){ if (!Element.prototype.matches) Element.prototype.matches = Element.prototype.msMatchesSelector||Element.prototype.webkitMatchesSelector; })();
+</script>
+</body>
+</html>
