@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAKBANK Statement Parser – Secure PDF Unlock</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; }
+        body {
+            background: #f0f4f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+            margin: 0;
+        }
+        .container {
+            max-width: 1100px;
+            width: 100%;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.08);
+            padding: 2rem 2rem 2.5rem;
+            transition: all 0.2s;
+        }
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #0a2f44;
+            margin: 0 0 0.25rem 0;
+            border-bottom: 2px solid #e9eef3;
+            padding-bottom: 0.9rem;
+        }
+        h1 span {
+            background: #136b4c;
+            color: white;
+            font-size: 0.75rem;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-weight: 500;
+        }
+        .upload-area {
+            border: 2px dashed #b9cde0;
+            background: #fefeff;
+            border-radius: 24px;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            transition: 0.2s;
+            margin: 24px 0 18px;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            border-color: #1f6392;
+            background: #f1f9ff;
+        }
+        .upload-area.dragover {
+            background: #e4f0fe;
+            border-color: #0f5b87;
+        }
+        .btn {
+            background: #1e5a7d;
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 44px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.15s;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+            margin: 8px 6px;
+        }
+        .btn-primary {
+            background: #136b4c;
+            box-shadow: 0 4px 10px rgba(19,107,76,0.2);
+        }
+        .btn-primary:hover {
+            background: #0e543b;
+            transform: scale(0.98);
+        }
+        .btn-secondary {
+            background: #3c6e8f;
+        }
+        .btn-secondary:hover {
+            background: #2d5774;
+        }
+        .btn:disabled {
+            background: #94aebb;
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.7;
+        }
+        .file-info {
+            background: #eef2f7;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .flex-row {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin: 12px 0 8px;
+        }
+        .log-console {
+            background: #0a1a24;
+            color: #c9e1f0;
+            border-radius: 20px;
+            padding: 1.2rem;
+            font-family: 'SF Mono', 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 210px;
+            overflow-y: auto;
+            margin: 18px 0 12px;
+            box-shadow: inset 0 0 0 1px #1e3a4a;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+        th {
+            background: #1f3f54;
+            color: white;
+            font-weight: 600;
+            padding: 10px 6px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+        }
+        td, th {
+            padding: 8px 6px;
+            border-bottom: 1px solid #e6edf4;
+        }
+        .csv-preview {
+            max-height: 320px;
+            overflow: auto;
+            border: 1px solid #dee4ec;
+            border-radius: 18px;
+            background: #ffffff;
+            margin-top: 12px;
+        }
+        .download-btn {
+            background: #1f6e4a;
+            margin-left: 10px;
+            text-decoration: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 32px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.1s;
+        }
+        .download-btn.disabled-link {
+            background: #a3bfcf;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+        .note {
+            background: #f0f6fa;
+            padding: 8px 16px;
+            border-radius: 28px;
+            font-size: 0.75rem;
+            color: #1f5978;
+        }
+        .password-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transition: 0.2s;
+        }
+        .password-modal.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        .modal-card {
+            background: white;
+            border-radius: 32px;
+            max-width: 420px;
+            width: 90%;
+            padding: 1.8rem 1.8rem 2rem;
+            box-shadow: 0 25px 45px rgba(0,0,0,0.25);
+            text-align: center;
+        }
+        .modal-card h3 {
+            margin-top: 0;
+            font-weight: 600;
+            color: #0a2f44;
+        }
+        .modal-card input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid #cbdae6;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            margin: 16px 0 12px;
+            outline: none;
+        }
+        .modal-card input:focus {
+            border-color: #136b4c;
+            box-shadow: 0 0 0 2px rgba(19,107,76,0.2);
+        }
+        .small {
+            font-size: 0.7rem;
+            color: #5f7f9e;
+        }
+        .badge {
+            background: #eaf4e8;
+            color: #136b4c;
+            border-radius: 50px;
+            padding: 2px 8px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🏦 RAKBANK statement parser <span>Secure + Password Support</span></h1>
+    <p class="note">🔐 Automatically detects password-protected PDFs. Enter password to unlock & extract transactions.<br>✅ Uses balance diff logic, handles Cr. balance, multi‑page, opening balance detection.</p>
+    
+    <div class="upload-area" id="dropZone">
+        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#1e5a7d" stroke-width="1.4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p style="margin: 12px 0 4px; font-weight: 500;">Drag & drop PDF (encrypted or plain) or click to browse</p>
+        <input type="file" id="fileInput" accept=".pdf,application/pdf" style="display: none;">
+        <button class="btn btn-secondary" id="selectFileBtn" type="button">📂 Select PDF file</button>
+    </div>
+
+    <div class="flex-row">
+        <div id="fileNameDisplay" class="file-info">📄 No file selected</div>
+        <div>
+            <button id="processBtn" class="btn" disabled>⚙️ Process & Export CSV</button>
+        </div>
+    </div>
+
+    <div id="logPanel" class="log-console">
+📋 Ready — choose a PDF statement. If password protected, you'll be prompted.
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 12px;">
+        <h3 style="margin-bottom: 0; font-weight: 500;">📊 CSV preview (first 15 rows)</h3>
+        <a id="downloadLink" class="download-btn disabled-link">⬇️ Download CSV</a>
+    </div>
+    <div class="csv-preview">
+        <table id="previewTable">
+            <thead>
+                <tr><th>Date</th><th>Description</th><th>Transaction ID</th><th>Withdrawal (AED)</th><th>Deposit (AED)</th><th>Balance (AED)</th></tr>
+            </thead>
+            <tbody id="previewBody">
+                <tr><td colspan="6" style="text-align:center; padding: 2.5rem;">✨ No data yet — process a statement</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="small" style="margin-top: 20px;">© Mohammed Mishab Ak — password protected PDF support (pdf.js decryption)</p>
+</div>
+
+<!-- Password Modal -->
+<div id="passwordModal" class="password-modal">
+    <div class="modal-card">
+        <h3>🔒 Password Protected PDF</h3>
+        <p style="color: #4a627a; font-size: 0.85rem;">This statement requires a password to extract transactions.</p>
+        <input type="password" id="pdfPasswordInput" placeholder="Enter PDF password" autocomplete="off">
+        <div style="display: flex; gap: 12px; justify-content: center; margin-top: 6px;">
+            <button id="modalSubmitBtn" class="btn btn-primary" style="padding: 10px 24px;">Unlock & Parse</button>
+            <button id="modalCancelBtn" class="btn" style="background: #8fabbd;">Cancel</button>
+        </div>
+        <p class="small">💡 The password is used only to decrypt locally.</p>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script>
+    (function(){
+        // configure pdf.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        
+        // DOM elements
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const selectFileBtn = document.getElementById('selectFileBtn');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const processBtn = document.getElementById('processBtn');
+        const logPanel = document.getElementById('logPanel');
+        const previewBody = document.getElementById('previewBody');
+        const downloadLink = document.getElementById('downloadLink');
+        
+        // Modal elements
+        const modal = document.getElementById('passwordModal');
+        const passwordInput = document.getElementById('pdfPasswordInput');
+        const modalSubmit = document.getElementById('modalSubmitBtn');
+        const modalCancel = document.getElementById('modalCancelBtn');
+        
+        // State
+        let selectedFile = null;          // original File object
+        let cachedArrayBuffer = null;      // store arrayBuffer for retry with password
+        let pendingResolve = null;          // promise resolver for password
+        let isProcessing = false;
+        
+        // Helper: logging
+        function log(message, isError = false) {
+            const div = document.createElement('div');
+            div.textContent = `› ${message}`;
+            if (isError) div.style.color = "#ffb7a7";
+            logPanel.appendChild(div);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+        
+        function clearLog() { logPanel.innerHTML = ''; logPanel.innerHTML = '📋 Log output:\n'; }
+        
+        // show/hide modal & password flow
+        function requestPassword() {
+            return new Promise((resolve) => {
+                pendingResolve = resolve;
+                passwordInput.value = '';
+                modal.classList.add('active');
+                passwordInput.focus();
+            });
+        }
+        
+        function closeModal() {
+            modal.classList.remove('active');
+            if (pendingResolve) {
+                pendingResolve(null);
+                pendingResolve = null;
+            }
+        }
+        
+        modalSubmit.onclick = () => {
+            const pwd = passwordInput.value;
+            if (pendingResolve) {
+                pendingResolve(pwd);
+                pendingResolve = null;
+            }
+            closeModal();
+        };
+        
+        modalCancel.onclick = () => {
+            if (pendingResolve) {
+                pendingResolve(null);
+                pendingResolve = null;
+            }
+            closeModal();
+            log('⛔ Password entry cancelled. PDF not processed.', true);
+            isProcessing = false;
+            processBtn.disabled = false;
+        };
+        
+        // close on backdrop click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modalCancel.click();
+        });
+        
+        // file selection handling
+        function setFile(file) {
+            selectedFile = file;
+            fileNameDisplay.innerHTML = `📎 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            processBtn.disabled = false;
+            processBtn.style.background = '#1e5a7d';
+            clearLog();
+            log(`✅ File ready: ${file.name}`);
+            cachedArrayBuffer = null;  // reset buffer so we reload
+        }
+        
+        selectFileBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) setFile(e.target.files[0]);
+        });
+        
+        // Drag & Drop
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) {
+                fileInput.files = e.dataTransfer.files;
+                setFile(e.dataTransfer.files[0]);
+            }
+        });
+        
+        // ---------- CORE PARSING (same robust logic, using balance diff) ----------
+        function extractTransactionRows(pageText) {
+            const rows = [];
+            // pattern 1: typical RAKBANK line with Cr. balance
+            const txRegex = /(\d{1,2}-[A-Za-z]{3}-\d{4})\s+(.+?)\s+([A-Z0-9\/\-]+)\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s+Cr\./gi;
+            let match;
+            while ((match = txRegex.exec(pageText)) !== null) {
+                rows.push({
+                    date: match[1],
+                    description: match[2].trim(),
+                    transId: match[3],
+                    amountCol: match[4],
+                    balanceStr: match[5]
+                });
+            }
+            // fallback: more flexible pattern (some variations)
+            const txRegex2 = /(\d{1,2}-[A-Za-z]{3}-\d{4})\s+(.+?)\s+([A-Z0-9\-_\/]+)\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s+Cr\./gi;
+            while ((match = txRegex2.exec(pageText)) !== null) {
+                if (!rows.find(r => r.transId === match[3] && r.date === match[1])) {
+                    rows.push({
+                        date: match[1],
+                        description: match[2].trim(),
+                        transId: match[3],
+                        amountCol: match[4],
+                        balanceStr: match[5]
+                    });
+                }
+            }
+            return rows;
+        }
+        
+        function parseTransactionLine(obj) {
+            try {
+                const balance = parseFloat(obj.balanceStr.replace(/,/g, ''));
+                if (isNaN(balance)) return null;
+                return {
+                    date: obj.date,
+                    description: cleanDescription(obj.description),
+                    transactionId: obj.transId,
+                    withdrawal: 0,
+                    deposit: 0,
+                    balance: balance
+                };
+            } catch(e) { return null; }
+        }
+        
+        function cleanDescription(desc) {
+            return desc.replace(/\s+/g, ' ').trim().substring(0, 180);
+        }
+        
+        function parseAllPages(pagesTextArray) {
+            let openingBalance = 0;
+            const rawTxLines = [];
+            // 1. extract opening balance
+            for (let txt of pagesTextArray) {
+                const openingMatch = txt.match(/Opening\s+Balance.*?AED\s*([\d,]+\.\d{2})\s*Cr\.?/i);
+                if (openingMatch) {
+                    openingBalance = parseFloat(openingMatch[1].replace(/,/g, ''));
+                    log(`🏦 Opening balance detected: ${openingBalance.toFixed(2)} AED`);
+                    break;
+                }
+            }
+            // 2. gather transaction rows
+            pagesTextArray.forEach((page, idx) => {
+                const lines = extractTransactionRows(page);
+                if (lines.length) log(`📄 Page ${idx+1}: ${lines.length} transaction rows`);
+                rawTxLines.push(...lines);
+            });
+            if (rawTxLines.length === 0) return { transactions: [], openingBalance };
+            
+            let parsedTxs = rawTxLines.map(line => parseTransactionLine(line)).filter(t => t !== null);
+            if (parsedTxs.length === 0) return { transactions: [], openingBalance };
+            
+            // reverse to chronological (oldest first) for diff calculation
+            parsedTxs.reverse();
+            let prevBalance = openingBalance;
+            for (let i = 0; i < parsedTxs.length; i++) {
+                const tx = parsedTxs[i];
+                const currentBal = tx.balance;
+                const diff = currentBal - prevBalance;
+                if (diff > 0) {
+                    tx.deposit = diff;
+                    tx.withdrawal = 0;
+                } else {
+                    tx.withdrawal = -diff;
+                    tx.deposit = 0;
+                }
+                // edge: zero diff -> both zero
+                prevBalance = currentBal;
+            }
+            // reverse back to newest first (original statement order)
+            parsedTxs.reverse();
+            return { transactions: parsedTxs, openingBalance };
+        }
+        
+        function generateCSV(transactions) {
+            if (!transactions.length) return '';
+            const header = ['Date', 'Description', 'Transaction ID', 'Withdrawal (AED)', 'Deposit (AED)', 'Balance (AED)'];
+            const rows = transactions.map(t => {
+                return [
+                    t.date,
+                    escapeCsv(t.description),
+                    escapeCsv(t.transactionId),
+                    (t.withdrawal || 0).toFixed(2),
+                    (t.deposit || 0).toFixed(2),
+                    (t.balance || 0).toFixed(2)
+                ].join(',');
+            });
+            return [header.join(',')].concat(rows).join('\n');
+        }
+        
+        function escapeCsv(str) {
+            if (!str) return '';
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text).replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+                return c;
+            });
+        }
+        
+        function showPreview(transactions) {
+            previewBody.innerHTML = '';
+            const top15 = transactions.slice(0, 15);
+            top15.forEach(t => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="white-space: nowrap;">${escapeHtml(t.date)}</td>
+                    <td style="max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(t.description)}">${escapeHtml(t.description)}</td>
+                    <td style="font-size:0.7rem;">${escapeHtml(t.transactionId)}</td>
+                    <td>${(t.withdrawal || 0).toFixed(2)}</td>
+                    <td>${(t.deposit || 0).toFixed(2)}</td>
+                    <td>${(t.balance || 0).toFixed(2)}</td>
+                `;
+                previewBody.appendChild(row);
+            });
+            if (transactions.length > 15) {
+                const moreRow = document.createElement('tr');
+                moreRow.innerHTML = `<td colspan="6" style="text-align:center; background:#fafcff;">⋯ +${transactions.length-15} more transactions ⋯</td>`;
+                previewBody.appendChild(moreRow);
+            }
+        }
+        
+        function enableDownload(csvContent, txCount) {
+            if (!csvContent || txCount === 0) {
+                downloadLink.classList.add('disabled-link');
+                downloadLink.style.pointerEvents = 'none';
+                downloadLink.textContent = '⬇️ No data';
+                return;
+            }
+            const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            downloadLink.href = url;
+            downloadLink.classList.remove('disabled-link');
+            downloadLink.style.pointerEvents = 'auto';
+            downloadLink.download = `rakbank_${new Date().toISOString().slice(0,10)}.csv`;
+            downloadLink.textContent = `⬇️ Download CSV (${txCount} rows)`;
+        }
+        
+        // ---------- PDF LOADER WITH PASSWORD HANDLING ----------
+        async function loadPdfWithPasswordHandling(file, passwordAttempt = null) {
+            const arrayBuffer = await file.arrayBuffer();
+            cachedArrayBuffer = arrayBuffer.slice(0); // store copy
+            let loadingTask = null;
+            try {
+                loadingTask = pdfjsLib.getDocument({ data: arrayBuffer, password: passwordAttempt });
+                const pdf = await loadingTask.promise;
+                // success
+                return pdf;
+            } catch (err) {
+                if (err.name === 'PasswordException' || (err.message && err.message.includes('Password'))) {
+                    log('🔐 PDF is password-protected. Requesting password...', false);
+                    const userPwd = await requestPassword();
+                    if (!userPwd) {
+                        throw new Error('Password required but not provided.');
+                    }
+                    // retry with new password using same buffer
+                    const retryTask = pdfjsLib.getDocument({ data: cachedArrayBuffer, password: userPwd });
+                    return await retryTask.promise;
+                }
+                throw err;
+            }
+        }
+        
+        async function extractTextFromPdf(pdfDoc) {
+            let fullTextPages = [];
+            for (let i = 1; i <= pdfDoc.numPages; i++) {
+                const page = await pdfDoc.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageStr = textContent.items.map(item => item.str).join(' ');
+                fullTextPages.push(pageStr);
+                log(`📖 Page ${i} extracted (${textContent.items.length} text items)`);
+            }
+            return fullTextPages;
+        }
+        
+        // main process
+        processBtn.addEventListener('click', async () => {
+            if (!selectedFile) {
+                log('⚠️ Please select a PDF file first.', true);
+                return;
+            }
+            if (isProcessing) {
+                log('⏳ Already processing, please wait.');
+                return;
+            }
+            isProcessing = true;
+            processBtn.disabled = true;
+            clearLog();
+            log(`🚀 Starting processing: ${selectedFile.name}`);
+            try {
+                // reset download
+                downloadLink.classList.add('disabled-link');
+                downloadLink.textContent = '⬇️ Download CSV';
+                // 1. load PDF (with automatic password prompt)
+                const pdfDoc = await loadPdfWithPasswordHandling(selectedFile, null);
+                log(`✅ PDF loaded successfully (${pdfDoc.numPages} pages, encrypted: ${pdfDoc._pdfInfo ? 'unlocked' : 'no'})`);
+                // 2. extract text
+                const pagesText = await extractTextFromPdf(pdfDoc);
+                // 3. parse transactions
+                const parsedResult = parseAllPages(pagesText);
+                const transactions = parsedResult.transactions;
+                if (!transactions.length) {
+                    log('⚠️ No transactions could be parsed. The statement format may differ or no transaction lines found.', true);
+                    previewBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">⚠️ No transactions extracted. Check if PDF contains transaction table.</td></tr>';
+                    enableDownload('', 0);
+                    isProcessing = false;
+                    processBtn.disabled = false;
+                    processBtn.style.background = '#1e5a7d';
+                    return;
+                }
+                log(`✨ Parsed ${transactions.length} transactions. Opening balance: ${parsedResult.openingBalance.toFixed(2)} AED`);
+                const csvData = generateCSV(transactions);
+                showPreview(transactions);
+                enableDownload(csvData, transactions.length);
+                log('📥 CSV ready! Use download button.');
+            } catch (err) {
+                log(`❌ Error: ${err.message || err}`, true);
+                console.error(err);
+                previewBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#b33;">❌ Failed to parse PDF. Possibly wrong password or unsupported format.</td></tr>';
+                enableDownload('', 0);
+            } finally {
+                isProcessing = false;
+                processBtn.disabled = false;
+                processBtn.style.background = '#1e5a7d';
+                // reset modal state just in case
+                if (modal.classList.contains('active')) closeModal();
+            }
+        });
+        
+        // initial UI state
+        processBtn.disabled = true;
+    })();
+</script>
+</body>
+</html>
